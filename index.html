@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoiceUp — 免費開源 AI 口說練習 App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --blue:        #3B8BEB;
+    --blue-deep:   #1F6ACC;
+    --blue-ink:    #154C9E;
+    --blue-soft:   #E6F1FE;
+    --blue-tint:   #C7DFFB;
+    --yellow:      #F5A623;
+    --yellow-warm: #F8B947;
+    --yellow-soft: #FFF1D6;
+    --green:       #2DB272;
+    --red:         #E5524C;
+    --cream:       #FFF7E6;
+    --cream-deep:  #FBEEC8;
+    --ink:         #1B2A52;
+    --ink-sub:     #5A6B92;
+    --line:        #1B2A52;
+    --shadow-s:    0 4px 0 rgba(27,42,82,0.10);
+    --shadow-m:    0 8px 0 rgba(27,42,82,0.10);
+    --shadow-l:    0 12px 0 rgba(27,42,82,0.10);
+    --shadow-card: 0 12px 30px rgba(59,139,235,0.15), 0 4px 10px rgba(59,139,235,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    color: var(--ink);
+    background: var(--cream);
+    overflow-x: hidden;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Background image fixed across page */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url('images/background.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    z-index: 0;
+    opacity: 1;
+  }
+  body::after {
+    /* gentle vignette so content reads on top */
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(255,247,230,0) 35%, rgba(255,247,230,0.45) 100%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .container { max-width: 1120px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 2; }
+
+  /* ─────────────── STICKY NAV ─────────────── */
+  .sticky-nav {
+    position: fixed; top: 14px; left: 50%;
+    transform: translate(-50%, -160%);
+    z-index: 60;
+    background: #fff;
+    border: 2px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+    border-radius: 999px;
+    padding: 8px 10px 8px 22px;
+    display: flex; align-items: center; gap: 18px;
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    width: min(720px, calc(100% - 28px));
+    justify-content: space-between;
+  }
+  .sticky-nav.visible { transform: translate(-50%, 0); }
+  .sticky-nav .nav-logo { height: 30px; display: block; }
+  .sticky-nav .nav-cta {
+    background: var(--blue);
+    color: #fff;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.92rem; font-weight: 600;
+    padding: 9px 20px;
+    border-radius: 999px;
+    border: 2px solid var(--ink);
+    box-shadow: 0 3px 0 var(--ink);
+    cursor: pointer; text-decoration: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+    white-space: nowrap;
+  }
+  .sticky-nav .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 0 var(--ink); }
+  .sticky-nav .nav-cta:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+
+  /* ─────────────── HERO ─────────────── */
+  .hero {
+    text-align: center;
+    padding: 110px 24px 80px;
+    position: relative;
+  }
+  .hero-stage {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+  .dolphin-hero {
+    width: 220px; height: 220px;
+    margin: 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    z-index: 2;
+    animation: floatDolphin 3.4s ease-in-out infinite;
+  }
+  .dolphin-hero img {
+    width: 220px; height: 220px;
+    object-fit: contain;
+    filter: drop-shadow(0 14px 24px rgba(59,139,235,0.25));
+  }
+  @keyframes floatDolphin {
+    0%, 100% { transform: translateY(0) rotate(-1deg); }
+    50%      { transform: translateY(-12px) rotate(2deg); }
+  }
+  /* dolphin shadow puddle */
+  .dolphin-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 50%;
+    width: 110px; height: 14px;
+    background: rgba(59,139,235,0.18);
+    border-radius: 50%;
+    filter: blur(6px);
+    transform: translateX(-50%);
+    animation: puddle 3.4s ease-in-out infinite;
+    z-index: 1;
+  }
+  @keyframes puddle {
+    0%, 100% { width: 110px; opacity: 0.18; }
+    50%      { width: 80px;  opacity: 0.12; }
+  }
+
+  /* Floating speech bubble */
+  .speech-bubble {
+    position: absolute;
+    top: 14px;
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 18px;
+    padding: 8px 14px;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 500;
+    font-size: 0.92rem;
+    color: var(--blue-deep);
+    box-shadow: 0 4px 0 var(--ink);
+    z-index: 3;
+    white-space: nowrap;
+    animation: bobbleA 4s ease-in-out infinite;
+  }
+  .speech-bubble.left { right: calc(100% + 8px); top: 10px; transform: rotate(-4deg); }
+  .speech-bubble.right { left: calc(100% + 8px); top: 50px; animation: bobbleB 4.4s ease-in-out infinite; transform: rotate(4deg); }
+  .speech-bubble.right { color: var(--yellow); }
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    background: #fff;
+    border-right: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+    transform: rotate(-45deg);
+    bottom: -8px; right: 22px;
+  }
+  .speech-bubble.right::after { right: auto; left: 22px; }
+  @keyframes bobbleA {
+    0%,100% { transform: rotate(-4deg) translateY(0); }
+    50%     { transform: rotate(-4deg) translateY(-6px); }
+  }
+  @keyframes bobbleB {
+    0%,100% { transform: rotate(4deg) translateY(0); }
+    50%     { transform: rotate(4deg) translateY(-6px); }
+  }
+
+  /* hero sparkles */
+  .spark {
+    position: absolute;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    color: var(--yellow);
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .hero-logo-img { height: 56px; margin: 18px auto 22px; display: block; }
+  .hero h1 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: clamp(2rem, 5.2vw, 3rem); font-weight: 700;
+    color: var(--blue-ink);
+    margin-bottom: 18px; line-height: 1.18;
+    letter-spacing: -0.01em;
+  }
+  .hero h1 .yellow-underline {
+    position: relative;
+    display: inline-block;
+    z-index: 1;
+  }
+  .hero h1 .mobile-break { display: none; }
+  .hero h1 .yellow-underline::after {
+    content: '';
+    position: absolute;
+    left: -4px; right: -4px; bottom: 2px;
+    height: 12px;
+    background: var(--yellow);
+    z-index: -1;
+    border-radius: 4px;
+    opacity: 0.85;
+  }
+  .hero p {
+    font-size: 1.08rem;
+    color: var(--ink-sub);
+    max-width: 580px; margin: 0 auto 40px;
+    line-height: 1.8;
+    font-weight: 500;
+  }
+
+  /* ─────────────── CTA BUTTONS ─────────────── */
+  .cta-block { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--blue);
+    color: #fff;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.18rem; font-weight: 600;
+    padding: 17px 38px;
+    border-radius: 999px;
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+    cursor: pointer; text-decoration: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 0 var(--ink); }
+  .btn-primary:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+  .btn-primary.yellow { background: var(--yellow); }
+
+  .btn-secondary-link {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.95rem; font-weight: 500;
+    color: var(--blue-deep);
+    text-decoration: none;
+    padding: 4px 12px;
+    border-radius: 999px;
+    transition: background 0.2s;
+  }
+  .btn-secondary-link:hover { background: var(--blue-soft); }
+  .cta-note { font-size: 0.86rem; color: var(--ink-sub); font-weight: 500; }
+  .hidden { display: none !important; }
+
+  /* ─────────────── MODAL ─────────────── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(27,42,82,0.45);
+    backdrop-filter: blur(6px);
+    z-index: 200; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-card {
+    background: #fff;
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 10px 0 var(--ink);
+    border-radius: 28px;
+    padding: 40px 36px 32px;
+    max-width: 420px; width: 100%;
+    text-align: center;
+    animation: popIn 0.32s cubic-bezier(0.34,1.56,0.64,1);
+    position: relative;
+  }
+  .modal-card::before {
+    content: '';
+    position: absolute;
+    top: -28px; left: 50%;
+    transform: translateX(-50%);
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--yellow);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 4px 0 var(--ink);
+    background-image: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), transparent 50%);
+  }
+  @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal-card .modal-emoji { font-size: 2.6rem; margin: 8px 0 8px; }
+  .modal-card h3 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.45rem; color: var(--blue-ink);
+    margin-bottom: 14px; font-weight: 700;
+  }
+  .modal-card p {
+    color: var(--ink-sub); font-size: 0.98rem;
+    line-height: 1.75; margin-bottom: 26px;
+  }
+  .modal-card .keyword {
+    background: var(--yellow-soft);
+    color: var(--blue-ink);
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 8px;
+    border: 1.5px dashed var(--yellow);
+  }
+  .btn-modal-close {
+    background: var(--blue); color: #fff;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.02rem; font-weight: 600;
+    padding: 13px 28px; border-radius: 999px;
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 5px 0 var(--ink);
+    cursor: pointer; width: 100%;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-modal-close:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--ink); }
+  .btn-modal-close:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--ink); }
+
+  /* ─────────────── SECTIONS ─────────────── */
+  section { padding: 80px 0; position: relative; z-index: 2; }
+  .section-head { text-align: center; margin-bottom: 56px; }
+  .section-label {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fff;
+    color: var(--blue-deep);
+    border: 2px solid var(--ink);
+    box-shadow: 0 3px 0 var(--ink);
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.82rem; font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 5px 16px;
+    border-radius: 999px;
+    margin-bottom: 18px;
+    transform: rotate(-1.5deg);
+  }
+  .section-label .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--yellow); }
+  .section-title {
+    font-family: 'Fredoka', sans-serif;
+    font-size: clamp(1.75rem, 4.4vw, 2.45rem);
+    font-weight: 700; color: var(--blue-ink);
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .section-sub {
+    color: var(--ink-sub); font-size: 1.02rem;
+    line-height: 1.75;
+    max-width: 580px; margin: 0 auto;
+    font-weight: 500;
+  }
+
+  /* ─────────────── FEATURES ─────────────── */
+  .features-section { overflow: visible; }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+    align-items: stretch;
+  }
+
+  .feature-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .feature-media {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    pointer-events: none;
+    position: relative;
+  }
+  .feature-media .phone {
+    position: relative;
+    width: 100%;
+    max-width: 280px;
+    aspect-ratio: 1080 / 1607;
+    background: transparent;
+  }
+  .feature-media .phone img {
+    width: 100%; height: 100%;
+    display: block;
+    object-fit: contain;
+    object-position: center bottom;
+    filter: drop-shadow(0 18px 30px rgba(27,42,82,0.18)) drop-shadow(0 6px 12px rgba(27,42,82,0.10));
+  }
+
+  /* ── STYLE A: Big hero inside bordered card ── */
+  body[data-feat-style="a"] .features-section .section-head { margin-bottom: 56px; }
+  body[data-feat-style="a"] .feature-card {
+    background: #fff;
+    border: 2.5px solid var(--ink);
+    border-radius: 28px;
+    padding: 24px 24px 30px;
+    box-shadow: 0 8px 0 var(--ink);
+  }
+  body[data-feat-style="a"] .feature-card:hover { transform: translateY(-4px); box-shadow: 0 12px 0 var(--ink); }
+  body[data-feat-style="a"] .feature-card:nth-child(1) { transform: rotate(-0.6deg); }
+  body[data-feat-style="a"] .feature-card:nth-child(1):hover { transform: rotate(-0.6deg) translateY(-4px); }
+  body[data-feat-style="a"] .feature-card:nth-child(3) { transform: rotate(0.6deg); }
+  body[data-feat-style="a"] .feature-card:nth-child(3):hover { transform: rotate(0.6deg) translateY(-4px); }
+  body[data-feat-style="a"] .feature-media {
+    background: var(--blue-soft);
+    border-radius: 20px;
+    padding: 22px 22px 0;
+    margin-bottom: 22px;
+    height: 260px;
+    overflow: hidden;
+    border: 2px solid var(--ink);
+  }
+  body[data-feat-style="a"] .feature-card:nth-child(2) .feature-media { background: var(--yellow-soft); }
+  body[data-feat-style="a"] .feature-card:nth-child(3) .feature-media { background: #DCEEFF; }
+  body[data-feat-style="a"] .feature-media .phone {
+    max-width: 220px;
+    aspect-ratio: auto;
+    height: 100%;
+  }
+  body[data-feat-style="a"] .feature-media::before,
+  body[data-feat-style="a"] .feature-media::after {
+    content: '';
+    position: absolute;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    z-index: 2;
+  }
+  body[data-feat-style="a"] .feature-media::before { top: 14px; left: 14px; background: var(--yellow); }
+  body[data-feat-style="a"] .feature-media::after { top: 14px; right: 14px; background: var(--blue); }
+
+  /* ── STYLE B: Floating breakout (no card chrome behind image) ── */
+  body[data-feat-style="b"] .features-section .section-head { margin-bottom: 40px; }
+  body[data-feat-style="b"] .feature-card {
+    padding: 0 8px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+  body[data-feat-style="b"] .feature-media {
+    height: 360px;
+    margin-bottom: 0;
+    align-items: flex-end;
+    overflow: visible;
+  }
+  body[data-feat-style="b"] .feature-card:nth-child(1) .feature-media .phone { transform: rotate(-3deg); }
+  body[data-feat-style="b"] .feature-card:nth-child(2) .feature-media .phone { transform: rotate(2deg) translateY(-12px); }
+  body[data-feat-style="b"] .feature-card:nth-child(3) .feature-media .phone { transform: rotate(-1.5deg); }
+  body[data-feat-style="b"] .feature-media .phone {
+    max-width: 260px;
+    height: 100%;
+    transition: transform 0.3s ease;
+  }
+  body[data-feat-style="b"] .feature-card:hover .feature-media .phone { transform: translateY(-8px) rotate(0); }
+  body[data-feat-style="b"] .feat-body {
+    background: #fff;
+    border: 2.5px solid var(--ink);
+    border-radius: 24px;
+    padding: 24px 22px 26px;
+    box-shadow: 0 8px 0 var(--ink);
+    margin-top: -10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── STYLE C: No card, transparent, editorial ── */
+  body[data-feat-style="c"] .features-section .section-head { margin-bottom: 40px; }
+  body[data-feat-style="c"] .feature-card {
+    padding: 0 8px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    text-align: center;
+  }
+  body[data-feat-style="c"] .feature-media {
+    height: 380px;
+    margin-bottom: 18px;
+    overflow: visible;
+  }
+  body[data-feat-style="c"] .feature-media .phone {
+    max-width: 270px;
+    height: 100%;
+    transition: transform 0.35s ease;
+  }
+  body[data-feat-style="c"] .feature-card:hover .feature-media .phone { transform: translateY(-8px); }
+  body[data-feat-style="c"] .feature-card .feat-body { padding: 0 4px; }
+  body[data-feat-style="c"] .feature-card h3 { font-size: 1.32rem; margin-bottom: 14px; }
+  body[data-feat-style="c"] .feedback-chips { justify-content: center; }
+  /* numbered badge */
+  body[data-feat-style="c"] .feature-card::before {
+    counter-increment: feat;
+    content: counter(feat, decimal-leading-zero);
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translate(-50%, -10px);
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--ink-sub);
+    background: #fff;
+    border: 2px solid var(--ink);
+    box-shadow: 0 3px 0 var(--ink);
+    border-radius: 999px;
+    padding: 4px 16px;
+    letter-spacing: 0.1em;
+    z-index: 2;
+  }
+  body[data-feat-style="c"] .features-grid { counter-reset: feat; padding-top: 16px; }
+
+  .feature-card h3 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.25rem; font-weight: 600;
+    color: var(--blue-ink); margin-bottom: 12px;
+  }
+  .feature-card p {
+    font-size: 0.96rem; color: var(--ink-sub);
+    line-height: 1.75; font-weight: 500;
+  }
+  .feature-card p strong { color: var(--blue-deep); font-weight: 700; }
+
+  /* horizontal scroll on mobile */
+  @media (max-width: 860px) {
+    .features-scroller {
+      margin: 0 -24px;
+      padding: 16px 24px 30px;
+      overflow-x: auto;
+      overflow-y: visible;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .features-scroller::-webkit-scrollbar { display: none; }
+    .features-grid {
+      grid-template-columns: none;
+      display: flex;
+      gap: 20px;
+      width: max-content;
+      padding-right: 24px;
+    }
+    .feature-card {
+      flex: 0 0 78vw;
+      max-width: 320px;
+      scroll-snap-align: center;
+    }
+    body[data-feat-style="a"] .feature-card:nth-child(1),
+    body[data-feat-style="a"] .feature-card:nth-child(3) { transform: rotate(0); }
+    body[data-feat-style="a"] .feature-media { height: 220px; }
+    body[data-feat-style="b"] .feature-media,
+    body[data-feat-style="c"] .feature-media { height: 320px; }
+    .features-hint { display: flex !important; }
+  }
+  .features-hint {
+    display: none;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 22px;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.85rem;
+    color: var(--ink-sub);
+    font-weight: 500;
+  }
+  .features-hint .swipe-icon {
+    display: inline-block;
+    animation: swipeHint 1.8s ease-in-out infinite;
+  }
+  @keyframes swipeHint {
+    0%, 100% { transform: translateX(-4px); }
+    50%      { transform: translateX(4px); }
+  }
+
+  .feedback-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.78rem; font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1.5px solid var(--ink);
+  }
+  .chip-ok   { background: #E5F7EE; color: #1a7a45; }
+  .chip-tip  { background: var(--yellow-soft); color: #a06b00; }
+  .chip-err  { background: #FCE4E2; color: #b04540; }
+
+  /* ─────────────── STEPS ─────────────── */
+  .steps-section { overflow: visible; }
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+    align-items: stretch;
+  }
+  .step-card { display: flex; flex-direction: column; }
+  .step-card .step-illus { flex-shrink: 0; }
+  .step-card > h3 { margin-top: auto; }
+  @media (max-width: 860px) {
+    .steps-scroller {
+      margin: 0 -24px;
+      padding: 24px 24px 30px;
+      overflow-x: auto;
+      overflow-y: visible;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .steps-scroller::-webkit-scrollbar { display: none; }
+    .steps-grid {
+      grid-template-columns: none;
+      display: flex;
+      gap: 20px;
+      width: max-content;
+      padding-right: 24px;
+      align-items: stretch;
+    }
+    .step-card {
+      flex: 0 0 78vw;
+      max-width: 320px;
+      scroll-snap-align: center;
+    }
+    .steps-hint { display: flex !important; }
+  }
+  .steps-hint {
+    display: none;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 22px;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.85rem;
+    color: var(--ink-sub);
+    font-weight: 500;
+  }
+  .steps-hint .swipe-icon { display: inline-block; animation: swipeHint 1.8s ease-in-out infinite; }
+  .step-cta-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    color: var(--blue-deep);
+    background: var(--blue-soft);
+    border: 1.5px dashed var(--blue);
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 999px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .step-cta-link:hover { background: var(--blue-tint); transform: translateY(-1px); }
+
+  .step-card {
+    background: #fff;
+    border: 2.5px solid var(--ink);
+    border-radius: 28px;
+    padding: 28px 26px;
+    box-shadow: 0 8px 0 var(--ink);
+    position: relative;
+  }
+  .step-number {
+    position: absolute;
+    top: -18px; left: 24px;
+    width: 48px; height: 48px;
+    background: var(--yellow);
+    color: var(--ink);
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.5rem; font-weight: 700;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 4px 0 var(--ink);
+    transform: rotate(-6deg);
+  }
+  .step-card:nth-child(2) .step-number { background: var(--blue); color: #fff; transform: rotate(6deg); }
+  .step-card:nth-child(3) .step-number { background: var(--yellow); transform: rotate(-4deg); }
+
+  .step-illus {
+    background: var(--blue-soft);
+    border: 2px solid var(--ink);
+    border-radius: 20px;
+    padding: 22px 18px;
+    margin: 14px 0 20px;
+    min-height: 150px;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    gap: 10px;
+    pointer-events: none;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+  }
+  .step-illus::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.6) 1.5px, transparent 2px),
+                      radial-gradient(circle at 80% 70%, rgba(255,255,255,0.5) 1.5px, transparent 2px);
+    background-size: 18px 18px;
+    opacity: 0.7;
+  }
+  .step-illus > * { position: relative; z-index: 1; }
+
+  .step-card:nth-child(2) .step-illus { background: #DCEEFF; }
+  .step-card:nth-child(3) .step-illus { background: var(--yellow-soft); }
+
+  .step-illus img.step-dolphin {
+    width: 96px; height: 96px; object-fit: contain;
+    filter: drop-shadow(0 6px 10px rgba(59,139,235,0.28));
+    animation: stepBob 3s ease-in-out infinite;
+  }
+  @keyframes stepBob {
+    0%,100% { transform: translateY(0) rotate(-2deg); }
+    50%     { transform: translateY(-5px) rotate(2deg); }
+  }
+  .step-illus .illus-label {
+    background: #fff;
+    border: 2px solid var(--ink);
+    box-shadow: 0 3px 0 var(--ink);
+    border-radius: 999px;
+    padding: 5px 14px;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.88rem; font-weight: 600;
+    color: var(--blue-ink); text-align: center;
+  }
+
+  .key-illus-wrap {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 10px; width: 100%;
+  }
+  .key-icon-circle {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 4px 0 var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem;
+    background: #fff;
+  }
+  .key-icon-circle.azure  { background: linear-gradient(135deg, #DCEEFF, #F0F8FF); }
+  .key-icon-circle.gemini { background: linear-gradient(135deg, #FFF1D6, #FFFAEC); }
+
+  .key-tag {
+    background: #fff;
+    border: 1.5px solid var(--ink);
+    color: var(--blue-ink);
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.78rem; font-weight: 600;
+  }
+  .key-bar {
+    width: 85%; height: 10px;
+    border-radius: 6px;
+    border: 1.5px solid var(--ink);
+    background:
+      repeating-linear-gradient(90deg,
+        rgba(27,42,82,0.65) 0px, rgba(27,42,82,0.65) 6px,
+        transparent 6px, transparent 10px);
+    background-color: rgba(255,255,255,0.6);
+  }
+  .key-free-badge {
+    background: #E5F7EE;
+    border: 1.5px solid var(--ink);
+    color: #1a7a45;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.78rem; font-weight: 600;
+    padding: 3px 12px;
+    border-radius: 999px;
+  }
+
+  .step-card h3 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.18rem; font-weight: 600;
+    color: var(--blue-ink); margin-bottom: 10px;
+  }
+  .step-card p {
+    font-size: 0.92rem; color: var(--ink-sub);
+    line-height: 1.75; font-weight: 500;
+  }
+  .step-card p strong { color: var(--blue-deep); font-weight: 700; }
+
+  /* trial callout */
+  .trial-callout {
+    background: #fff;
+    border: 2.5px dashed var(--yellow);
+    border-radius: 24px;
+    padding: 32px 36px;
+    text-align: center;
+    margin-top: 56px;
+    position: relative;
+  }
+  .trial-callout::before {
+    content: '🎁';
+    position: absolute;
+    top: -18px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--yellow);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 4px 0 var(--ink);
+    border-radius: 999px;
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+  }
+  .trial-callout p {
+    font-size: 1rem; color: var(--ink-sub);
+    line-height: 1.8; font-weight: 500;
+  }
+  .trial-callout strong { color: var(--blue-ink); font-weight: 700; }
+  .trial-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--yellow);
+    color: var(--ink);
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.98rem; font-weight: 600;
+    padding: 7px 18px;
+    border-radius: 999px;
+    border: 2px solid var(--ink);
+    box-shadow: 0 3px 0 var(--ink);
+    margin-bottom: 14px;
+    margin-top: 8px;
+  }
+
+  /* ─────────────── COMPARE ─────────────── */
+  .compare-section { text-align: center; }
+  .compare-table-wrap {
+    overflow-x: auto;
+    border-radius: 24px;
+    background: #fff;
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 8px 0 var(--ink);
+  }
+  table {
+    width: 100%; border-collapse: collapse;
+    background: transparent;
+    font-size: 0.96rem;
+    font-family: 'Nunito', sans-serif;
+  }
+  thead tr { background: var(--blue); color: #fff; }
+  thead th {
+    padding: 16px 22px;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.05rem; font-weight: 600;
+    text-align: left;
+    border-bottom: 2.5px solid var(--ink);
+  }
+  thead th:not(:last-child) { border-right: 2px solid rgba(255,255,255,0.25); }
+  thead th:nth-child(2) { background: var(--yellow); color: var(--ink); }
+  td {
+    padding: 15px 22px;
+    border-bottom: 1.5px solid rgba(27,42,82,0.08);
+    color: var(--ink-sub);
+    font-weight: 500;
+    text-align: left;
+  }
+  td:not(:last-child) { border-right: 1.5px solid rgba(27,42,82,0.06); }
+  td:nth-child(2) { background: rgba(255,247,230,0.55); font-weight: 700; color: var(--blue-ink); }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td:not(:nth-child(2)) { background: rgba(230,241,254,0.35); }
+  td:first-child { font-weight: 700; color: var(--ink); font-family: 'Fredoka', sans-serif; }
+  .check-yes { color: var(--green); font-size: 1.1rem; font-weight: 700; }
+  .check-no  { color: var(--red); font-size: 1.05rem; opacity: 0.7; }
+  .check-highlight {
+    display: inline-block;
+    background: var(--yellow-soft);
+    border: 1.5px solid var(--yellow);
+    color: var(--blue-ink);
+    border-radius: 8px;
+    padding: 2px 10px;
+    font-weight: 700;
+  }
+
+  /* ─────────────── FAQ ─────────────── */
+  .faq-list {
+    max-width: 760px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .faq-item {
+    background: #fff;
+    border: 2.5px solid var(--ink);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 6px 0 var(--ink);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .faq-item:hover { transform: translateY(-2px); box-shadow: 0 8px 0 var(--ink); }
+  .faq-q {
+    width: 100%; background: none; border: none;
+    padding: 20px 26px;
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.02rem; font-weight: 500;
+    color: var(--blue-ink); text-align: left; gap: 14px;
+  }
+  .faq-q .arrow {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--yellow);
+    border: 2px solid var(--ink);
+    color: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+    transition: transform 0.25s;
+  }
+  .faq-item.open .faq-q .arrow {
+    transform: rotate(180deg);
+    background: var(--blue);
+    color: #fff;
+  }
+  .faq-a {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s;
+    padding: 0 26px;
+  }
+  .faq-item.open .faq-a { max-height: 400px; padding: 0 26px 22px; }
+  .faq-a p {
+    font-size: 0.96rem; color: var(--ink-sub);
+    line-height: 1.8; font-weight: 500;
+  }
+  .faq-a a {
+    color: var(--blue-deep); font-weight: 700;
+    text-decoration: none;
+    background: var(--blue-soft);
+    border-radius: 6px;
+    padding: 1px 8px;
+  }
+  .faq-a a:hover { background: var(--blue-tint); }
+
+  /* ─────────────── FOOTER ─────────────── */
+  footer {
+    background: var(--blue-ink);
+    color: rgba(255,255,255,0.82);
+    text-align: center;
+    padding: 56px 24px 40px;
+    position: relative;
+    z-index: 2;
+    margin-top: 40px;
+    border-top: 3px solid var(--ink);
+  }
+  footer::before {
+    /* wavy top */
+    content: '';
+    position: absolute;
+    top: -1px; left: 0; right: 0;
+    height: 24px;
+    background: var(--blue-ink);
+    -webkit-mask-image: radial-gradient(circle at 12px -8px, transparent 14px, black 14.5px);
+    mask-image: radial-gradient(circle at 12px -8px, transparent 14px, black 14.5px);
+    -webkit-mask-size: 24px 24px;
+    mask-size: 24px 24px;
+    transform: translateY(-24px);
+  }
+  footer .footer-logo {
+    background: #fff;
+    display: inline-block;
+    padding: 10px 22px;
+    border-radius: 999px;
+    border: 2px solid #000;
+    box-shadow: 0 4px 0 #000;
+    margin-bottom: 18px;
+  }
+  footer .footer-logo img { height: 32px; display: block; }
+  footer p {
+    font-size: 0.94rem; line-height: 1.85;
+    font-weight: 500;
+  }
+  footer p:first-of-type { font-family: 'Fredoka', sans-serif; font-size: 1rem; }
+  footer a {
+    color: var(--yellow-warm); text-decoration: none;
+    font-weight: 700;
+    border-bottom: 1.5px solid transparent;
+    transition: border-color 0.2s;
+  }
+  footer a:hover { border-color: var(--yellow-warm); }
+  .footer-links {
+    display: flex; justify-content: center; gap: 28px;
+    margin-top: 20px; flex-wrap: wrap;
+    font-family: 'Fredoka', sans-serif;
+  }
+
+  /* ─────────────── DECORATIONS ─────────────── */
+  .deco {
+    position: absolute;
+    z-index: 0;
+    pointer-events: none;
+    user-select: none;
+  }
+  .deco-circle {
+    border-radius: 50%;
+    border: 2.5px solid var(--ink);
+    background: var(--yellow);
+  }
+  .deco-blue { background: var(--blue); }
+  .deco-star {
+    color: var(--yellow);
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+  }
+
+  @media (max-width: 760px) {
+    .hero { padding: 84px 20px 60px; }
+    .hero h1 .mobile-break { display: inline; }
+    .dolphin-hero, .dolphin-hero img { width: 170px; height: 170px; }
+    section { padding: 60px 0; }
+    .btn-primary { font-size: 1.04rem; padding: 15px 30px; }
+    .speech-bubble { display: none; }
+    thead th, td { padding: 12px 14px; font-size: 0.88rem; }
+    .trial-callout { padding: 28px 22px; }
+    /* iOS Safari has known issues with background-attachment: fixed */
+    body::before { background-attachment: scroll; }
+    footer {
+      padding: 48px 20px 36px;
+      position: relative;
+      z-index: 10;
+    }
+    .footer-links { gap: 14px; }
+    .footer-links a {
+      display: inline-block;
+      max-width: 100%;
+      word-break: break-word;
+      line-height: 1.5;
+    }
+  }
+</style>
+</head>
+<body data-feat-style="c">
+
+<!-- ── STICKY NAV ── -->
+<nav class="sticky-nav" id="stickyNav">
+  <img src="images/logo.png" alt="VoiceUp" class="nav-logo">
+  <!-- 試用上線後啟用：
+  <a href="https://voice-up-nine.vercel.app/" class="nav-cta" id="navCta">立即免費試用</a>
+  -->
+  <button type="button" class="nav-cta" id="navCta" onclick="document.getElementById('modal-notify').classList.add('open')">開放時提醒我</button>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero" id="heroSection">
+  <div class="container">
+    <div class="hero-stage">
+      <div class="speech-bubble left">Hi there! 👋</div>
+      <div class="speech-bubble right">Let's talk!</div>
+      <div class="dolphin-hero">
+        <img src="images/hi.png" alt="VoiceUp 海豚">
+      </div>
+    </div>
+
+    <img src="images/logo.png" alt="VoiceUp" class="hero-logo-img">
+
+    <h1>免費開源<br class="mobile-break"> <span class="yellow-underline">AI 口說練習</span> App</h1>
+    <p>專為中高階學習者設計的 AI 口說練習 app —<br>真實情境對話、即時文法回饋、完整學習閉環。</p>
+
+    <!-- PHASE A -->
+    <div id="cta-before" class="cta-block">
+      <span class="cta-note">5/30–6/1 三天免費開放 · 同步開源</span>
+      <button class="btn-primary" onclick="document.getElementById('modal-notify').classList.add('open')">
+        🔔 提前預約，5/30 提醒我
+      </button>
+    </div>
+
+    <!-- PHASE B -->
+    <div id="cta-trial" class="cta-block hidden">
+      <a href="https://voice-up-nine.vercel.app/" target="_blank" class="btn-primary">
+        🎁 立即免費試用
+      </a>
+      <a href="https://github.com/sophia6331/VoiceUp" target="_blank" class="btn-secondary-link">
+        ↗ GitHub 開源專案
+      </a>
+      <span class="cta-note">試用期間無需設定任何 API 金鑰，直接開始練習</span>
+    </div>
+
+    <!-- PHASE C -->
+    <div id="cta-opensource" class="cta-block hidden">
+      <a href="https://github.com/sophia6331/VoiceUp" target="_blank" class="btn-primary">
+        ⭐ GitHub 開源專案
+      </a>
+      <span class="cta-note">完全免費 · 自備 API Key · 可自行部署</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── MODAL ── -->
+<div id="modal-notify" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-card">
+    <div class="modal-emoji">💬</div>
+    <h3>私訊 Sophia 預約提醒</h3>
+    <p>
+      在 <strong>Facebook</strong> 或 <strong>LinkedIn</strong> 私訊 Sophia，<br>
+      說通關密語 <span class="keyword">「我要試用」</span>，<br>
+      5/30 開放時 Sophia 會主動提醒你！
+    </p>
+    <button class="btn-modal-close" onclick="document.getElementById('modal-notify').classList.remove('open')">
+      我現在去私訊 👋
+    </button>
+  </div>
+</div>
+
+<!-- ── FEATURES ── -->
+<section class="features-section">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-label"><span class="dot"></span>核心功能</span>
+      <h2 class="section-title">不只是對話練習</h2>
+      <p class="section-sub">從開口，到真的學會，VoiceUp 給你完整的學習閉環。</p>
+    </div>
+    <div class="features-scroller">
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-media">
+            <div class="phone"><img src="images/feature_1.png" alt="VoiceUp 對話場景與 AI 即時文法回饋"></div>
+          </div>
+          <div class="feat-body">
+            <h3>真實情境 AI 對話</h3>
+            <p>8 種職場與生活場景，或自訂你的專屬情境。說完每句話，AI 即時分析是否自然：</p>
+            <div class="feedback-chips">
+              <span class="chip chip-ok">✅ 表達自然</span>
+              <span class="chip chip-tip">💡 更好的說法</span>
+              <span class="chip chip-err">✗ 文法問題</span>
+            </div>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-media">
+            <div class="phone"><img src="images/feature_2.png" alt="學習庫與情境對話考驗"></div>
+          </div>
+          <div class="feat-body">
+            <h3>學習庫完整閉環</h3>
+            <p>說到好句子一鍵儲存，AI 自動翻譯中文。接著用字卡複習，最後進入<strong>「情境對話考驗」</strong>——在真實對話中自然說出目標句子，才算真的學會。</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-media">
+            <div class="phone"><img src="images/feature_3.png" alt="關鍵字、句型與完整示範句三層提示"></div>
+          </div>
+          <div class="feat-body">
+            <h3>三層提示，不怕卡住</h3>
+            <p>說不出來時，有三層提示陪你：<br>🔑 關鍵字 → 📐 句型框架 → 💬 完整示範句，循序漸進，不讓你中途放棄。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="features-hint">
+      <span class="swipe-icon">←→</span> 左右滑動查看更多功能
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <span class="section-label"><span class="dot"></span>開始使用</span>
+      <h2 class="section-title">三步驟，馬上開練</h2>
+      <p class="section-sub">自備 Google Gemini 和 Azure 語音辨識 API Key，VoiceUp 就是你的免費英文口說練習 App。</p>
+    </div>
+
+    <div class="steps-scroller">
+      <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <div class="step-illus">
+          <img src="images/hi.png" alt="VoiceUp 海豚" class="step-dolphin">
+          <div class="illus-label">歡迎來到 VoiceUp 👋</div>
+        </div>
+        <h3>開啟 VoiceUp 網頁版App</h3>
+        <a class="step-cta-link" onclick="document.getElementById('modal-notify').classList.add('open')">🔔 開放時試用與 Github 開源時提醒我</a>
+      </div>
+
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <div class="step-illus">
+          <div class="key-illus-wrap">
+            <div class="key-icon-circle azure">🎙️</div>
+            <div class="key-tag">Azure Speech</div>
+            <div class="key-bar"></div>
+            <div class="key-free-badge">✅ 每月 5 小時免費</div>
+          </div>
+        </div>
+        <h3>設定 Azure 語音辨識（選填）</h3>
+        <p>前往 <strong>Azure Portal</strong> 申請免費方案，每月 5 小時語音額度，個人練習完全夠用。不想用語音？略過，用打字也可以練習。</p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <div class="step-illus">
+          <div class="key-illus-wrap">
+            <div class="key-icon-circle gemini">✨</div>
+            <div class="key-tag">Google Gemini</div>
+            <div class="key-bar"></div>
+            <div class="key-free-badge">✅ 個人用量免費</div>
+          </div>
+        </div>
+        <h3>設定 Gemini AI 金鑰</h3>
+        <p>前往 <strong>Google AI Studio</strong> 取得免費 API Key，貼入後即可開始練習。個人使用量通常不會超過免費上限。</p>
+      </div>
+      </div>
+    </div>
+    <div class="steps-hint">
+      <span class="swipe-icon">←→</span> 左右滑動查看三個步驟
+    </div>
+
+    <div class="trial-callout">
+      <div class="trial-badge">5/30–6/1 限時三天</div>
+      <p>
+        <strong>試用期間不需要設定任何 API 金鑰，直接開始體驗。</strong><br>
+        試用期結束後再申請自己的免費金鑰即可，不需付費給我們。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ── COMPARISON ── -->
+<section class="compare-section">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-label"><span class="dot"></span>適合誰？</span>
+      <h2 class="section-title">你在找的，這裡都有</h2>
+      <p class="section-sub">VoiceUp 專注在中高階學習者最需要的東西。</p>
+    </div>
+    <div class="compare-table-wrap">
+      <table>
+        <thead>
+          <tr><th>功能</th><th>VoiceUp</th><th>其他 App</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>目標族群</td><td><span class="check-highlight">B1–C1 中高階</span></td><td>廣泛，偏初中階</td></tr>
+          <tr><td>即時文法回饋（含原因說明）</td><td><span class="check-yes">✅</span></td><td><span class="check-yes">✅</span></td></tr>
+          <tr><td>自訂練習場景</td><td><span class="check-yes">✅</span></td><td><span class="check-yes">✅</span></td></tr>
+          <tr><td>學習庫（儲存好句子）</td><td><span class="check-yes">✅</span></td><td>陽春版</td></tr>
+          <tr><td>字卡複習</td><td><span class="check-yes">✅</span></td><td><span class="check-no">❌</span></td></tr>
+          <tr><td>情境對話考驗</td><td><span class="check-yes">✅</span></td><td><span class="check-no">❌</span></td></tr>
+          <tr><td>費用</td><td><span class="check-highlight">完全免費</span></td><td>訂閱制</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ── -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <span class="section-label"><span class="dot"></span>常見問題</span>
+      <h2 class="section-title">FAQ</h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q">試用期結束後要付費嗎？<span class="arrow">▼</span></button>
+        <div class="faq-a"><p>不需要。前往 <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> 申請 Gemini API 免費方案，以及 <a href="https://portal.azure.com/" target="_blank">Azure Portal</a> 申請語音辨識免費層，完全不需付費給我們。個人練習用量通常遠低於免費額度。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">我的 API 金鑰安全嗎？<span class="arrow">▼</span></button>
+        <div class="faq-a"><p>金鑰只存在你的瀏覽器 localStorage，不會傳送到我們的伺服器。你也可以直接查看 GitHub 原始碼確認這一點。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">我的英文程度夠用 VoiceUp 嗎？<span class="arrow">▼</span></button>
+        <div class="faq-a"><p>VoiceUp 適合 B1–C1，也就是已有基礎、想加強口說流利度的學習者。如果你能看懂這個網頁，就夠了。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">可以自己部署一份嗎？<span class="arrow">▼</span></button>
+        <div class="faq-a"><p>可以！VoiceUp 完全開源，你可以 fork GitHub repo，連上自己的 Vercel，設定自己的 API 金鑰，就有一份完全屬於你自己的版本。</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-logo">
+    <img src="images/logo.png" alt="VoiceUp">
+  </div>
+  <p>開源免費英文口說練習 PWA</p>
+  <p>Made with ❤️ by Sophia</p>
+  <div class="footer-links">
+    <a href="javascript:void(0)" onclick="document.getElementById('modal-notify').classList.add('open')">🔔 開放時試用與 Github 開源時提醒我</a>
+  </div>
+</footer>
+
+<script>
+  // Sticky nav
+  const hero = document.getElementById('heroSection');
+  const nav  = document.getElementById('stickyNav');
+  const observer = new IntersectionObserver(
+    ([entry]) => nav.classList.toggle('visible', !entry.isIntersecting),
+    { threshold: 0 }
+  );
+  observer.observe(hero);
+
+  // FAQ toggle
+  document.querySelectorAll('.faq-item').forEach(item => {
+    item.querySelector('.faq-q').addEventListener('click', () => item.classList.toggle('open'));
+  });
+</script>
+
+<div id="tweaks-root"></div>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "featStyle": "c"
+  }/*EDITMODE-END*/;
+
+  function VoiceUpTweaks() {
+    const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+    React.useEffect(() => {
+      document.body.setAttribute('data-feat-style', t.featStyle);
+    }, [t.featStyle]);
+
+    return (
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="特色區塊樣式" />
+        <TweakRadio
+          label="視覺風格"
+          value={t.featStyle}
+          onChange={v => setTweak('featStyle', v)}
+          options={[
+            { value: 'a', label: 'A 彩塊' },
+            { value: 'b', label: 'B 卡片' },
+            { value: 'c', label: 'C 編輯' },
+          ]}
+        />
+      </TweaksPanel>
+    );
+  }
+
+  const root = ReactDOM.createRoot(document.getElementById('tweaks-root'));
+  root.render(<VoiceUpTweaks />);
+</script>
+</body>
+</html>
