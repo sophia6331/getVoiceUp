@@ -828,6 +828,37 @@
     border-radius: 999px;
   }
 
+  .gemini-illus {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    width: 100%;
+    padding: 4px 0;
+  }
+  .gemini-logo {
+    width: 84px; height: 84px;
+    filter: drop-shadow(0 6px 12px rgba(138, 80, 220, 0.35));
+    animation: geminiSpin 5s ease-in-out infinite;
+  }
+  @keyframes geminiSpin {
+    0%, 100% { transform: rotate(-6deg) scale(1); }
+    50%      { transform: rotate(6deg) scale(1.05); }
+  }
+  .gemini-label {
+    background: #fff;
+    border: 2px solid var(--ink);
+    box-shadow: 0 3px 0 var(--ink);
+    border-radius: 999px;
+    padding: 7px 18px;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--blue-ink);
+    text-align: center;
+  }
+
   .step-card h3 {
     font-family: 'Fredoka', sans-serif;
     font-size: 1.18rem; font-weight: 600;
@@ -1243,7 +1274,7 @@
             <div class="key-icon-circle azure">🎙️</div>
             <div class="key-tag">Azure Speech</div>
             <div class="key-bar"></div>
-            <div class="key-free-badge">✅ 每月 5 小時免費</div>
+            <div class="key-free-badge">🎙️ 口說輸入回答</div>
           </div>
         </div>
         <h3>設定 Azure 語音辨識（選填）</h3>
@@ -1253,11 +1284,18 @@
       <div class="step-card">
         <div class="step-number">3</div>
         <div class="step-illus">
-          <div class="key-illus-wrap">
-            <div class="key-icon-circle gemini">✨</div>
-            <div class="key-tag">Google Gemini</div>
-            <div class="key-bar"></div>
-            <div class="key-free-badge">✅ 個人用量免費</div>
+          <div class="gemini-illus">
+            <svg class="gemini-logo" viewBox="0 0 64 64" aria-hidden="true">
+              <defs>
+                <linearGradient id="gemGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#4796E3"/>
+                  <stop offset="45%" stop-color="#8A50DC"/>
+                  <stop offset="100%" stop-color="#E04AB0"/>
+                </linearGradient>
+              </defs>
+              <path fill="url(#gemGrad)" d="M32 2c1.4 11.7 6.8 21.1 18.5 24.4l11.5 5.6-11.5 5.6C38.8 40.9 33.4 50.3 32 62c-1.4-11.7-6.8-21.1-18.5-24.4L2 32l11.5-5.6C25.2 23.1 30.6 13.7 32 2z"/>
+            </svg>
+            <div class="gemini-label">AI 成為你的英文教驗</div>
           </div>
         </div>
         <h3>設定 Gemini AI 金鑰</h3>
